@@ -1,45 +1,47 @@
-import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
-import { Vector3 } from 'three';
-import { PlatformData, PlatformType } from '../types';
+import React, { useEffect, useRef, useState } from 'react';
+import { PlatformData, PlatformType, EnemyData } from '../types';
 import { CHUNK_SIZE, PLATFORM_GAP, WORLD_WIDTH } from '../constants';
 import { Platform } from './Platform';
+import { Shark } from './Shark';
 
 interface LevelManagerProps {
   playerZ: number;
   platformsRef: React.MutableRefObject<PlatformData[]>;
+  enemiesRef: React.MutableRefObject<EnemyData[]>;
 }
 
-export const LevelManager: React.FC<LevelManagerProps> = ({ playerZ, platformsRef }) => {
+export const LevelManager: React.FC<LevelManagerProps> = ({ playerZ, platformsRef, enemiesRef }) => {
   const [renderPlatforms, setRenderPlatforms] = useState<PlatformData[]>([]);
+  const [renderEnemies, setRenderEnemies] = useState<EnemyData[]>([]);
+  
   const lastGeneratedZ = useRef(0);
   const nextId = useRef(0);
 
-  // Initialization
   useEffect(() => {
     generateInitialChunk();
   }, []);
 
-  // Continuous Generation loop based on player position
   useEffect(() => {
-    const renderDist = 30;
+    const renderDist = 40;
     if (playerZ + renderDist > lastGeneratedZ.current) {
         generateChunk(lastGeneratedZ.current + PLATFORM_GAP);
     }
     
-    // Cleanup old platforms (visual optimization)
-    // We keep them in ref for collision logic safety for a bit, but remove from state
-    const cleanupThreshold = playerZ - 20;
+    // Cleanup
+    const cleanupThreshold = playerZ - 25;
     setRenderPlatforms(prev => prev.filter(p => p.z > cleanupThreshold));
+    setRenderEnemies(prev => prev.filter(e => e.z > cleanupThreshold));
     
-    // Sync ref (keep all relevant platforms in ref for physics, even if not rendered? No, keep in sync)
+    // Sync refs for physics
     platformsRef.current = platformsRef.current.filter(p => p.z > cleanupThreshold && p.active);
+    enemiesRef.current = enemiesRef.current.filter(e => e.z > cleanupThreshold && e.active);
 
   }, [playerZ]);
 
   const generateInitialChunk = () => {
     const plats: PlatformData[] = [];
     
-    // Safe zone at start
+    // Safe zone
     for (let i = 0; i < 5; i++) {
         plats.push({
             id: `start-${i}`,
@@ -57,35 +59,36 @@ export const LevelManager: React.FC<LevelManagerProps> = ({ playerZ, platformsRe
 
   const generateChunk = (startZ: number) => {
     const newPlats: PlatformData[] = [];
+    const newEnemies: EnemyData[] = [];
     
     for (let row = 0; row < CHUNK_SIZE; row++) {
         const z = startZ + (row * PLATFORM_GAP);
         
-        // Logic to ensure playability:
-        // We need at least one platform reachable from the previous row's average centers?
-        // Simple grid noise approach
-        
         let hasPlatformInRow = false;
+        const isSharkRow = Math.random() > 0.7; // 30% chance row has sharks in gaps
 
         for (let col = 0; col < WORLD_WIDTH; col++) {
-             // Center the grid
              const x = (col - Math.floor(WORLD_WIDTH / 2)) * PLATFORM_GAP;
              
-             // Random Generation Logic
              const rand = Math.random();
              let type = PlatformType.STANDARD;
              let active = true;
 
-             if (rand > 0.85) {
+             // Procedural Logic
+             if (rand > 0.8) {
                  active = false; // Gap
-             } else if (rand > 0.7) {
-                 type = PlatformType.CRACKED;
-             } else if (rand > 0.6) {
-                 type = PlatformType.SLIPPERY;
+             } else if (rand > 0.75) {
+                 type = PlatformType.TURTLE; // 5% Turtle
+             } else if (rand > 0.70) {
+                 type = PlatformType.WHALE; // 5% Whale
+             } else if (rand > 0.60) {
+                 type = PlatformType.CRACKED; // 10% Cracked
+             } else if (rand > 0.50) {
+                 type = PlatformType.SLIPPERY; // 10% Slippery
              }
 
-             // Force at least one platform in center lanes if row is empty so far
-             if (col === Math.floor(WORLD_WIDTH/2) && !hasPlatformInRow && !active) {
+             // Safety: Ensure middle lane isn't impossible early on
+             if (col === Math.floor(WORLD_WIDTH/2) && !hasPlatformInRow && !active && z < 100) {
                  active = true;
                  type = PlatformType.STANDARD;
              }
@@ -97,7 +100,17 @@ export const LevelManager: React.FC<LevelManagerProps> = ({ playerZ, platformsRe
                      x, 
                      z,
                      type,
-                     active
+                     active,
+                     initialX: x // Store initial X for movers
+                 });
+             } else if (isSharkRow && Math.abs(x) <= PLATFORM_GAP) {
+                 // Spawn shark in the gap if it's a "Shark Row" and near center
+                 newEnemies.push({
+                     id: `e-${nextId.current++}`,
+                     x,
+                     z,
+                     type: 'SHARK',
+                     active: true
                  });
              }
         }
@@ -106,7 +119,10 @@ export const LevelManager: React.FC<LevelManagerProps> = ({ playerZ, platformsRe
     lastGeneratedZ.current = startZ + (CHUNK_SIZE * PLATFORM_GAP);
     
     platformsRef.current = [...platformsRef.current, ...newPlats];
+    enemiesRef.current = [...enemiesRef.current, ...newEnemies];
+    
     setRenderPlatforms(prev => [...prev, ...newPlats]);
+    setRenderEnemies(prev => [...prev, ...newEnemies]);
   };
 
   return (
@@ -114,6 +130,10 @@ export const LevelManager: React.FC<LevelManagerProps> = ({ playerZ, platformsRe
       {renderPlatforms.map(p => (
         <Platform key={p.id} data={p} />
       ))}
+      {renderEnemies.map(e => (
+        <Shark key={e.id} data={e} />
+      ))}
+      
       {/* Infinite Water Plane */}
       <mesh position={[0, -0.5, playerZ]} rotation={[-Math.PI / 2, 0, 0]}>
          <planeGeometry args={[100, 100]} />

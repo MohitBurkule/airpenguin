@@ -1,14 +1,19 @@
 // Physics
 export const GRAVITY = -25;
 export const JUMP_FORCE = 12;
+export const WHALE_JUMP_FORCE = 22;
 export const MOVE_SPEED = 8;
-export const SLIDE_FRICTION = 0.95; // For slippery ice
 export const AIR_CONTROL_FACTOR = 1.0;
+export const SLIPPERY_CONTROL_FACTOR = 0.2; // Hard to steer after slippery ice
 
 // World
 export const PLATFORM_SIZE = 2;
 export const PLATFORM_GAP = 3.5; // Distance between grid centers
 export const PLATFORM_RADIUS = 1.2; // Hitbox radius
+
+// Enemies
+export const SHARK_RADIUS = 1.0;
+export const SHARK_PATROL_RANGE = 3;
 
 // Camera
 export const CAMERA_OFFSET_Z = 10;

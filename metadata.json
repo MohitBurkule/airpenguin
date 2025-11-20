@@ -1,5 +1,5 @@
 {
   "name": "Air Penguin Web",
-  "description": "A physics-based top-down arcade game where you control a bouncing penguin using tilt or keyboard controls. Navigate treacherous ice platforms and avoid the water.",
+  "description": "A physics-based top-down arcade game where you control a bouncing penguin using tilt (Mobile) or mouse (PC). Navigate treacherous ice, slippery slopes, moving turtles, and avoid the sharks!",
   "requestFramePermissions": []
 }

@@ -2,7 +2,9 @@ export enum PlatformType {
   STANDARD = 'STANDARD',
   CRACKED = 'CRACKED',
   SLIPPERY = 'SLIPPERY',
-  NONE = 'NONE' // Water/Gap
+  TURTLE = 'TURTLE', // Moving platform
+  WHALE = 'WHALE',   // Super jump
+  NONE = 'NONE'
 }
 
 export enum GameState {
@@ -18,6 +20,15 @@ export interface PlatformData {
   type: PlatformType;
   active: boolean;
   steppedOn?: boolean;
+  initialX?: number; // For calculating movement
+}
+
+export interface EnemyData {
+  id: string;
+  x: number;
+  z: number;
+  type: 'SHARK';
+  active: boolean;
 }
 
 export interface InputState {

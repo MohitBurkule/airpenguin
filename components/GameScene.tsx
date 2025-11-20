@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Vector3, MathUtils } from 'three';
 import { Player } from './Player';
 import { LevelManager } from './LevelManager';
-import { PlatformData, GameState } from '../types';
+import { PlatformData, EnemyData, GameState } from '../types';
 import { CAMERA_OFFSET_Y, CAMERA_OFFSET_Z, CAMERA_LOOK_Z_OFFSET } from '../constants';
 import { Environment } from '@react-three/drei';
 
@@ -17,12 +17,7 @@ const CameraController: React.FC<{ playerPos: Vector3 }> = ({ playerPos }) => {
   const { camera } = useThree();
   
   useFrame(() => {
-    // Camera Logic: 
-    // Follows Player Z strictly but with smoothing
-    // Follows Player X slightly to keep them in view but not 1:1 (reduces motion sickness)
-    // Y is fixed height
-    
-    const targetX = playerPos.x * 0.3; // dampen X tracking
+    const targetX = playerPos.x * 0.3; 
     const targetZ = playerPos.z - CAMERA_OFFSET_Z;
     
     camera.position.x = MathUtils.lerp(camera.position.x, targetX, 0.1);
@@ -37,6 +32,7 @@ const CameraController: React.FC<{ playerPos: Vector3 }> = ({ playerPos }) => {
 
 export const GameScene: React.FC<GameSceneProps> = ({ gameState, onDie, setScore }) => {
   const platformsRef = useRef<PlatformData[]>([]);
+  const enemiesRef = useRef<EnemyData[]>([]);
   const [playerPos, setPlayerPos] = useState(new Vector3(0, 0, 0));
 
   const handleUpdatePosition = (pos: Vector3) => {
@@ -63,6 +59,7 @@ export const GameScene: React.FC<GameSceneProps> = ({ gameState, onDie, setScore
         {gameState === GameState.PLAYING && (
           <Player 
             platforms={platformsRef}
+            enemies={enemiesRef}
             onDie={onDie}
             onUpdatePosition={handleUpdatePosition}
             isPlaying={true}
@@ -72,6 +69,7 @@ export const GameScene: React.FC<GameSceneProps> = ({ gameState, onDie, setScore
         <LevelManager 
             playerZ={playerPos.z} 
             platformsRef={platformsRef} 
+            enemiesRef={enemiesRef}
         />
         
         {/* Fog for depth hiding */}

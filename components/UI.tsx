@@ -20,7 +20,7 @@ export const UI: React.FC<UIProps> = ({ gameState, score, bestScore, onStart, on
         </div>
         {gameState === GameState.PLAYING && (
           <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-white text-xs font-mono">
-            <div className="opacity-70">TILT / MOUSE TO MOVE</div>
+            <div className="opacity-70">TILT DEVICE or USE MOUSE</div>
           </div>
         )}
       </div>
@@ -31,11 +31,15 @@ export const UI: React.FC<UIProps> = ({ gameState, score, bestScore, onStart, on
         {gameState === GameState.MENU && (
           <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center transform transition-all hover:scale-105">
             <h1 className="text-4xl font-black text-blue-600 mb-2 tracking-tighter">ICE HOP</h1>
-            <p className="text-gray-500 mb-6">Avoid the water. Keep hopping.</p>
+            <p className="text-gray-500 mb-6">Master the ice. Avoid the sharks.</p>
             <div className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg text-sm text-gray-600">
-                <p className="font-bold mb-1">How to Play</p>
-                <p>Tilt device, use Mouse position, or Arrow Keys to control the jump direction.</p>
+              <div className="bg-blue-50 p-4 rounded-lg text-sm text-gray-600 text-left">
+                <p className="font-bold mb-2 text-blue-800">Controls:</p>
+                <ul className="list-disc pl-4 space-y-1">
+                    <li><b>Mobile:</b> Tilt device to steer.</li>
+                    <li><b>PC:</b> Move Mouse from center to tilt.</li>
+                    <li><b>Keyboard:</b> WASD / Arrows (Assist).</li>
+                </ul>
               </div>
               <button
                 onClick={onStart}
@@ -51,6 +55,7 @@ export const UI: React.FC<UIProps> = ({ gameState, score, bestScore, onStart, on
           <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center animate-fade-in">
             <div className="text-6xl mb-4">💦</div>
             <h2 className="text-3xl font-bold text-gray-800 mb-2">SPLASH!</h2>
+            <p className="text-sm text-gray-400 mb-6">Watch out for slippery ice and sharks!</p>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gray-100 p-3 rounded-lg">
                 <div className="text-xs text-gray-500 uppercase">Score</div>
@@ -72,7 +77,7 @@ export const UI: React.FC<UIProps> = ({ gameState, score, bestScore, onStart, on
       </div>
       
       <div className="text-center text-white/30 text-xs pb-2">
-        v1.1 | Discrete Physics Engine | PC & Mobile
+        v1.2 | PC Support | Sharks & Powerups
       </div>
     </div>
   );

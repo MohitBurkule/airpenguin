@@ -33,7 +33,7 @@ export class InputService {
     // Mouse Listeners for PC "Tilt"
     window.addEventListener('mousemove', (e) => {
       this.mouse = { x: e.clientX, y: e.clientY };
-      // If we detect mouse movement, enable mouse mode unless we've confirmed mobile orientation
+      // If we detect significant mouse movement, enable mouse mode
       if (!this.isMobile) {
           this.useMouse = true;
       }
@@ -63,7 +63,10 @@ export class InputService {
     if (this.orientation) {
       this.calibration = { ...this.orientation };
     }
-    // Mouse assumes screen center is neutral, so no explicit calibration needed.
+    // Mouse assumes screen center is neutral
+    if (typeof window !== 'undefined') {
+        this.mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    }
   }
 
   public getInput(): InputState {
@@ -71,9 +74,6 @@ export class InputService {
 
     if (this.isMobile && this.orientation) {
       // Mobile Tilt Logic
-      // Gamma is Left/Right (X axis in game)
-      // Beta is Front/Back (Z axis in game)
-      
       const maxTilt = 25; // Degrees
       
       let rawX = this.orientation.gamma - this.calibration.gamma;
@@ -91,24 +91,25 @@ export class InputService {
       const centerX = window.innerWidth / 2;
       const centerY = window.innerHeight / 2;
       
-      // Sensitivity: Full tilt at 30% of screen min dimension
-      const sensitivityRadius = Math.min(window.innerWidth, window.innerHeight) * 0.3;
+      // Sensitivity: Full tilt at 25% of screen height
+      const sensitivityRadius = window.innerHeight * 0.25;
       
       const deltaX = this.mouse.x - centerX;
       const deltaY = this.mouse.y - centerY;
       
       // Map to -1 to 1
       input.x = Math.max(-1, Math.min(1, deltaX / sensitivityRadius));
-      // Invert Y because screen Y increases downwards, but Game Z increases upwards (forward)
+      // Invert Y because moving mouse UP (negative Y) means go FORWARD (positive Z)
       input.z = Math.max(-1, Math.min(1, -deltaY / sensitivityRadius)); 
     }
 
     // Keyboard Fallback / Additive
-    // Allows for keyboard adjustments on top of mouse drift if needed
     if (this.keys.has('ArrowUp') || this.keys.has('KeyW')) input.z += 1;
     if (this.keys.has('ArrowDown') || this.keys.has('KeyS')) input.z -= 1;
-    if (this.keys.has('ArrowLeft') || this.keys.has('KeyA')) input.x -= 1;
-    if (this.keys.has('ArrowRight') || this.keys.has('KeyD')) input.x += 1;
+    
+    // Flipped A/D keys as requested
+    if (this.keys.has('ArrowLeft') || this.keys.has('KeyA')) input.x += 1; // Right
+    if (this.keys.has('ArrowRight') || this.keys.has('KeyD')) input.x -= 1; // Left
 
     // Normalize vector if magnitude > 1
     const len = Math.sqrt(input.x * input.x + input.z * input.z);
