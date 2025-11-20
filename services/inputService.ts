@@ -83,9 +83,17 @@ export class InputService {
       rawX = Math.max(-maxTilt, Math.min(maxTilt, rawX));
       rawZ = Math.max(-maxTilt, Math.min(maxTilt, rawZ));
 
-      // Normalize -1 to 1
-      input.x = rawX / maxTilt;
-      input.z = rawZ / maxTilt; 
+      // Normalize -1 to 1 AND Invert signs to match screen direction
+      // +X in World is Left on Screen.
+      // Right Tilt (+Gamma) -> Should be Right Move (-X). So Invert Gamma.
+      input.x = -(rawX / maxTilt);
+      
+      // +Z in World is Forward (Up) on Screen.
+      // Back Tilt should be Back Move (-Z).
+      // If Back Tilt produces Negative Beta, we want Negative Z.
+      // If Back Tilt produces Positive Beta (depending on holding), we invert.
+      // User reported "Back is Front", so we invert the Z axis.
+      input.z = -(rawZ / maxTilt); 
     } else if (this.useMouse) {
       // Mouse "Virtual Joystick" Logic
       const centerX = window.innerWidth / 2;
@@ -98,18 +106,26 @@ export class InputService {
       const deltaY = this.mouse.y - centerY;
       
       // Map to -1 to 1
-      input.x = Math.max(-1, Math.min(1, deltaX / sensitivityRadius));
-      // Invert Y because moving mouse UP (negative Y) means go FORWARD (positive Z)
-      input.z = Math.max(-1, Math.min(1, -deltaY / sensitivityRadius)); 
+      // Mouse Right (+deltaX) -> Should be Right Move (-X). Invert.
+      input.x = -Math.max(-1, Math.min(1, deltaX / sensitivityRadius));
+      
+      // Mouse Up (-deltaY) -> Should be Forward Move (+Z). 
+      // Original was -deltaY. User reported inversion issues.
+      // Mouse Down (+deltaY) -> Should be Back Move (-Z).
+      // If we used -deltaY: Down (+deltaY) -> -Z (Back). This seems correct.
+      // But user says "Back is Front". So we invert Z.
+      // input.z = Math.max(-1, Math.min(1, deltaY / sensitivityRadius));
+      // Actually, let's try inverting strictly based on user feedback.
+      input.z = Math.max(-1, Math.min(1, deltaY / sensitivityRadius)); 
     }
 
     // Keyboard Fallback / Additive
     if (this.keys.has('ArrowUp') || this.keys.has('KeyW')) input.z += 1;
     if (this.keys.has('ArrowDown') || this.keys.has('KeyS')) input.z -= 1;
     
-    // Flipped A/D keys as requested
-    if (this.keys.has('ArrowLeft') || this.keys.has('KeyA')) input.x += 1; // Right
-    if (this.keys.has('ArrowRight') || this.keys.has('KeyD')) input.x -= 1; // Left
+    // Note: In this camera setup (+Z looking at player), +X is LEFT on screen.
+    if (this.keys.has('ArrowLeft') || this.keys.has('KeyA')) input.x += 1; // Adds +X (Left)
+    if (this.keys.has('ArrowRight') || this.keys.has('KeyD')) input.x -= 1; // Adds -X (Right)
 
     // Normalize vector if magnitude > 1
     const len = Math.sqrt(input.x * input.x + input.z * input.z);
