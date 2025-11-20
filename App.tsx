@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { GameScene } from './components/GameScene';
 import { UI } from './components/UI';
@@ -8,6 +9,7 @@ const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.MENU);
   const [score, setScore] = useState(0);
   const [bestScore, setBestScore] = useState(0);
+  const [sensitivity, setSensitivity] = useState(1.5); // Default sensitivity
 
   useEffect(() => {
     // Initialize Input Listener
@@ -46,14 +48,17 @@ const App: React.FC = () => {
       <GameScene 
         gameState={gameState} 
         onDie={handleDie} 
-        setScore={setScore} 
+        setScore={setScore}
+        sensitivity={sensitivity}
       />
       <UI 
         gameState={gameState} 
         score={score} 
         bestScore={bestScore} 
         onStart={handleStart} 
-        onRestart={handleRestart} 
+        onRestart={handleRestart}
+        sensitivity={sensitivity}
+        setSensitivity={setSensitivity}
       />
     </div>
   );

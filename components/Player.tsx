@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Vector3, Group, MathUtils } from 'three';
@@ -14,16 +15,27 @@ interface PlayerProps {
   enemies: React.MutableRefObject<EnemyData[]>;
   onDie: () => void;
   onUpdatePosition: (pos: Vector3) => void;
+  onImpact: (intensity: number) => void;
   isPlaying: boolean;
+  sensitivity: number;
 }
 
-export const Player: React.FC<PlayerProps> = ({ platforms, enemies, onDie, onUpdatePosition, isPlaying }) => {
+export const Player: React.FC<PlayerProps> = ({ 
+  platforms, 
+  enemies, 
+  onDie, 
+  onUpdatePosition, 
+  onImpact,
+  isPlaying,
+  sensitivity
+}) => {
   const groupRef = useRef<Group>(null);
   const [velocity] = useState(new Vector3(0, JUMP_FORCE, 0));
   const position = useRef(new Vector3(0, 2, 0)); 
-  const airControl = useRef(AIR_CONTROL_FACTOR); // Determines how much you can steer
+  const controlFactor = useRef(AIR_CONTROL_FACTOR); // Lerp speed for movement
   const inputService = InputService.getInstance();
   const bodyRef = useRef<Group>(null);
+  const lastPlatformId = useRef<string | null>(null);
 
   useFrame((state, delta) => {
     if (!isPlaying || !groupRef.current) return;
@@ -33,23 +45,30 @@ export const Player: React.FC<PlayerProps> = ({ platforms, enemies, onDie, onUpd
     // Physics: Gravity
     velocity.y += GRAVITY * delta;
     
-    // Physics: Input (Air Control)
-    // If we just hit slippery ice, control is low
-    const targetVx = input.x * MOVE_SPEED;
-    const targetVz = input.z * MOVE_SPEED;
-    const lerpSpeed = 5 * delta * airControl.current;
+    // --- Movement Physics ---
+    // Calculate target velocity based on Input * Sensitivity
+    const targetVx = input.x * sensitivity * MOVE_SPEED;
+    const targetVz = input.z * sensitivity * MOVE_SPEED;
+    
+    // We use a variable lerp speed (controlFactor) to simulate friction/traction.
+    // High controlFactor = Snappy (Ground/Air). Low controlFactor = Sliding (Ice).
+    const lerpSpeed = controlFactor.current * delta;
 
     velocity.x = MathUtils.lerp(velocity.x, targetVx, lerpSpeed);
-    velocity.z = MathUtils.lerp(velocity.z, targetVz + 2, lerpSpeed); // Forward momentum
+    
+    // For Z axis, we add a base forward momentum so player doesn't have to hold 'up' constantly,
+    // but holding 'back' (negative Z) can stop them.
+    const forwardBias = 2.0;
+    velocity.z = MathUtils.lerp(velocity.z, targetVz + forwardBias, lerpSpeed);
 
-    // Apply Velocity
+    // Apply Velocity to Position
     position.current.x += velocity.x * delta;
     position.current.y += velocity.y * delta;
     position.current.z += velocity.z * delta;
 
     // --- Collision Detection ---
     
-    // 1. Sharks (Check regardless of height if really close, or just when low)
+    // 1. Sharks
     if (position.current.y < 1.0) {
        const shark = enemies.current.find(e => {
            if (!e.active) return false;
@@ -63,7 +82,7 @@ export const Player: React.FC<PlayerProps> = ({ platforms, enemies, onDie, onUpd
     }
 
     // 2. Platforms
-    if (position.current.y <= 0) {
+    if (position.current.y <= 0 && velocity.y <= 0) {
       // Check for platform landing
       const platform = platforms.current.find(p => {
         const dx = p.x - position.current.x;
@@ -75,53 +94,74 @@ export const Player: React.FC<PlayerProps> = ({ platforms, enemies, onDie, onUpd
         // HIT PLATFORM
         position.current.y = 0; // Clamp to floor
         
-        // Handle Cracked Ice
-        if (platform.type === PlatformType.CRACKED) {
-            if (platform.steppedOn) {
-                platform.active = false;
-            } else {
-                platform.steppedOn = true;
+        // Only trigger specific interactions once per landing
+        if (lastPlatformId.current !== platform.id) {
+            // Shake Camera on Impact
+            onImpact(platform.type === PlatformType.WHALE ? 0.8 : 0.3);
+            lastPlatformId.current = platform.id;
+
+            // Handle Cracked Ice
+            if (platform.type === PlatformType.CRACKED) {
+                if (platform.steppedOn) {
+                    platform.active = false;
+                } else {
+                    platform.steppedOn = true;
+                }
             }
         }
 
-        // Reset Control unless slippery
+        // Physics & Control based on Surface
         if (platform.type === PlatformType.SLIPPERY) {
-            airControl.current = SLIPPERY_CONTROL_FACTOR;
-            // Slide visuals: maintain or boost horizontal velocity
-            velocity.x *= 1.3;
-            velocity.z *= 1.1;
+            controlFactor.current = SLIPPERY_CONTROL_FACTOR; // Lose control (slide)
+            // Boost speed slightly on ice to make it feel fast/uncontrollable
+            velocity.x *= 1.02; 
         } else {
-            airControl.current = AIR_CONTROL_FACTOR;
+            controlFactor.current = AIR_CONTROL_FACTOR; // Regain control
         }
 
-        // Bounce Force
+        // --- BOUNCE LOGIC ---
+        // "Jump should not wear out": Reset velocity to fixed force every impact.
+        let bounceForce = JUMP_FORCE;
+
         if (platform.type === PlatformType.WHALE) {
-            velocity.y = WHALE_JUMP_FORCE;
-            // Reset control on whale to allow adjusting the massive jump
-            airControl.current = AIR_CONTROL_FACTOR * 0.8; 
+            bounceForce = WHALE_JUMP_FORCE;
+            controlFactor.current = AIR_CONTROL_FACTOR * 0.5; // Less control on big jump
         } else if (platform.type === PlatformType.SLIPPERY) {
-            velocity.y = JUMP_FORCE * 0.7; // Low bounce on slide
-        } else {
-            velocity.y = JUMP_FORCE;
+            bounceForce = JUMP_FORCE * 0.8; // Lower bounce on ice to emphasize sliding
         }
+
+        velocity.y = bounceForce;
         
         // Squish animation
-        if (bodyRef.current) bodyRef.current.scale.set(1.3, 0.7, 1.3);
+        if (bodyRef.current) {
+            bodyRef.current.scale.set(1.4, 0.6, 1.4);
+        }
 
       } else {
-        // Missed platform -> Water
-        onDie();
+        // Missed platform -> Water (Game Over) if we fell significantly below 0
+        if (position.current.y < -0.5) {
+            onDie();
+        }
       }
+    } else if (position.current.y > 0.1) {
+        // In the air
+        lastPlatformId.current = null;
     }
 
     // Visual Recovery (Unsquish)
     if (bodyRef.current) {
-        bodyRef.current.scale.lerp(new Vector3(1, 1, 1), 10 * delta);
+        bodyRef.current.scale.lerp(new Vector3(1, 1, 1), 15 * delta);
     }
 
     // Update Scene Object
     groupRef.current.position.copy(position.current);
-    const lookTarget = new Vector3(position.current.x + velocity.x, position.current.y, position.current.z + velocity.z);
+    
+    // Look Rotation: Smoothly look towards movement direction
+    const lookTarget = new Vector3(
+        position.current.x + velocity.x, 
+        position.current.y, 
+        position.current.z + velocity.z
+    );
     groupRef.current.lookAt(lookTarget);
 
     onUpdatePosition(position.current);

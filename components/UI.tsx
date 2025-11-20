@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { GameState } from '../types';
 
@@ -7,9 +8,19 @@ interface UIProps {
   bestScore: number;
   onStart: () => void;
   onRestart: () => void;
+  sensitivity: number;
+  setSensitivity: (val: number) => void;
 }
 
-export const UI: React.FC<UIProps> = ({ gameState, score, bestScore, onStart, onRestart }) => {
+export const UI: React.FC<UIProps> = ({ 
+  gameState, 
+  score, 
+  bestScore, 
+  onStart, 
+  onRestart,
+  sensitivity,
+  setSensitivity
+}) => {
   return (
     <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 z-10">
       {/* HUD */}
@@ -32,7 +43,25 @@ export const UI: React.FC<UIProps> = ({ gameState, score, bestScore, onStart, on
           <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center transform transition-all hover:scale-105">
             <h1 className="text-4xl font-black text-blue-600 mb-2 tracking-tighter">ICE HOP</h1>
             <p className="text-gray-500 mb-6">Master the ice. Avoid the sharks.</p>
+            
             <div className="space-y-4">
+              {/* Settings */}
+              <div className="bg-gray-50 p-4 rounded-lg text-left">
+                <label className="text-xs font-bold text-gray-500 uppercase flex justify-between mb-2">
+                  <span>Sensitivity</span>
+                  <span>{(sensitivity * 100).toFixed(0)}%</span>
+                </label>
+                <input 
+                  type="range" 
+                  min="0.5" 
+                  max="3.0" 
+                  step="0.1" 
+                  value={sensitivity}
+                  onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+              </div>
+
               <div className="bg-blue-50 p-4 rounded-lg text-sm text-gray-600 text-left">
                 <p className="font-bold mb-2 text-blue-800">Controls:</p>
                 <ul className="list-disc pl-4 space-y-1">
@@ -77,7 +106,7 @@ export const UI: React.FC<UIProps> = ({ gameState, score, bestScore, onStart, on
       </div>
       
       <div className="text-center text-white/30 text-xs pb-2">
-        v1.2 | PC Support | Sharks & Powerups
+        v1.3 | Camera Shake | Physics Update
       </div>
     </div>
   );
