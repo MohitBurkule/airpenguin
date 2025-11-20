@@ -1,0 +1,79 @@
+import React from 'react';
+import { GameState } from '../types';
+
+interface UIProps {
+  gameState: GameState;
+  score: number;
+  bestScore: number;
+  onStart: () => void;
+  onRestart: () => void;
+}
+
+export const UI: React.FC<UIProps> = ({ gameState, score, bestScore, onStart, onRestart }) => {
+  return (
+    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-6 z-10">
+      {/* HUD */}
+      <div className="flex justify-between items-start w-full">
+        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 text-white font-bold shadow-md">
+          <div className="text-xs uppercase opacity-80">Score</div>
+          <div className="text-2xl">{Math.floor(score)}</div>
+        </div>
+        {gameState === GameState.PLAYING && (
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 text-white text-xs font-mono">
+            <div className="opacity-70">TILT / MOUSE TO MOVE</div>
+          </div>
+        )}
+      </div>
+
+      {/* Menus */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+        
+        {gameState === GameState.MENU && (
+          <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center transform transition-all hover:scale-105">
+            <h1 className="text-4xl font-black text-blue-600 mb-2 tracking-tighter">ICE HOP</h1>
+            <p className="text-gray-500 mb-6">Avoid the water. Keep hopping.</p>
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg text-sm text-gray-600">
+                <p className="font-bold mb-1">How to Play</p>
+                <p>Tilt device, use Mouse position, or Arrow Keys to control the jump direction.</p>
+              </div>
+              <button
+                onClick={onStart}
+                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg transition-colors"
+              >
+                START GAME
+              </button>
+            </div>
+          </div>
+        )}
+
+        {gameState === GameState.GAME_OVER && (
+          <div className="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center animate-fade-in">
+            <div className="text-6xl mb-4">💦</div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">SPLASH!</h2>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-100 p-3 rounded-lg">
+                <div className="text-xs text-gray-500 uppercase">Score</div>
+                <div className="text-xl font-bold text-gray-800">{Math.floor(score)}</div>
+              </div>
+              <div className="bg-yellow-50 p-3 rounded-lg">
+                <div className="text-xs text-yellow-600 uppercase">Best</div>
+                <div className="text-xl font-bold text-yellow-600">{Math.floor(bestScore)}</div>
+              </div>
+            </div>
+            <button
+              onClick={onRestart}
+              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-lg shadow-lg transition-colors"
+            >
+              TRY AGAIN
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <div className="text-center text-white/30 text-xs pb-2">
+        v1.1 | Discrete Physics Engine | PC & Mobile
+      </div>
+    </div>
+  );
+};
